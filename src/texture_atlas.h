@@ -7,6 +7,8 @@
 #include "vector_util.h"
 #include <SFML/Graphics.hpp>
 
+using uint = unsigned int;
+
 // RectPacker maintains two offsets into an overall bin size:
 //  - A line y-offset, representing the current horizontal line on which to place new rectangles
 //      horizontally along (the line corresponding to the rectangle tops)
