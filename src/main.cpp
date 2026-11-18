@@ -124,7 +124,7 @@ int main() {
     }
 
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);  // Additive blending
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);  // Additive blending
     glClearColor(0, 0, 0, 1);
 
     Timer timer;
@@ -184,15 +184,15 @@ int main() {
         }
 
         // UNCOMMENT THIS ONCE YOU'RE WORKING ON "Batched rendering (part 2)"
-        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // spriteManager.drawGL();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        spriteManager.drawGL();
         // DOWN TO HERE
 
         // COMMENT THIS BLOCK ONCE YOU'RE WORKING ON "Batched rendering (part 2)"
-        window.clear(sf::Color::Black);
-        sf::RenderStates states{};
-        states.blendMode = sf::BlendAdd;
-        spriteManager.draw(window, states);
+        //window.clear(sf::Color::Black);
+        //sf::RenderStates states{};
+        //states.blendMode = sf::BlendAdd;
+        //spriteManager.draw(window, states);
         // DOWN TO HERE
 
         window.display();

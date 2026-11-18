@@ -7,6 +7,9 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
 
+#include <cstddef>
+#include <vector>
+
 #define GL_SILENCE_DEPRECATION  // silences macOS OpenGL deprecation warnings
 
 #define glCheck(expr)                                                                              \
@@ -25,10 +28,50 @@ public:
         : mVertices(sf::PrimitiveType::Triangles),
           mNumSprites{0},
           mAtlas(atlasSize, padding),
-          mShader(std::filesystem::path{"src/main_sfml.vert"}, std::filesystem::path{"src/main.frag"}) {
+          mShader(std::filesystem::path{"src/main.vert"}, std::filesystem::path{"src/main.frag"}),
         // TODO
-    }
+        mTextureUniformLocation{-1},
+        mTransformsUniformLocation{-1},
+        mNumTransformsUniformLocation{-1},
+        mPositionAttribLocation{-1},
+        mTexCoordsAttribLocation{-1},
+        mSpriteNumberAttribLocation{-1},
+        mVerticesVBO{0},
+        mSpriteNumberVBO{0},
+        mTransformsTexture{0} {
 
+            // Activate the shader program.
+            glUseProgram(mShader.getNativeHandle());
+
+            // Obtain vertex attribute locations.
+            mPositionAttribLocation = glGetAttribLocation(mShader.getNativeHandle(), "position");
+
+            mTexCoordsAttribLocation = glGetAttribLocation(mShader.getNativeHandle(), "texCoords");
+
+            mSpriteNumberAttribLocation = glGetAttribLocation(mShader.getNativeHandle(), "spriteNumber");
+
+            // Obtain uniform locations.
+            mTextureUniformLocation = glGetUniformLocation(mShader.getNativeHandle(), "texture");
+
+            mTransformsUniformLocation = glGetUniformLocation(mShader.getNativeHandle(), "transforms");
+
+            mNumTransformsUniformLocation = glGetUniformLocation(mShader.getNativeHandle(), "numTransforms");
+
+            // Generate GPU buffers.
+            glGenBuffers(1, &mVerticesVBO);
+            glGenBuffers(1, &mSpriteNumberVBO);
+
+            // Generate the transformation texture.
+            glGenTextures(1, &mTransformsTexture);
+        }
+
+    // Added a destructor for part 2
+    ~SpriteManager() {
+        glDeleteBuffers(1, &mVerticesVBO);
+        glDeleteBuffers(1, &mSpriteNumberVBO);
+        glDeleteTextures(1, &mTransformsTexture);
+    }
+    
     // TODO
     TextureID registerTexture(const std::string& filepath) { return mAtlas.registerTexture(filepath); }
 
@@ -61,6 +104,9 @@ public:
         // Add the six vertices to the vertex array.
         for (const auto& vertex : vertices) {
             mVertices.append(vertex);
+
+            // Store this sprite's ID for this vertex.
+            mSpriteNumbers.push_back(static_cast<float>(mNumSprites));
         }
 
         // Every sprite gets a default transformation.
@@ -129,7 +175,62 @@ public:
     }
 
     // TODO
-    void drawGL() {};
+    void drawGL() {
+        // Use our shader.
+        glUseProgram(mShader.getNativeHandle());
+
+        const GLsizei vertexCount = static_cast<GLsizei>(mVertices.getVertexCount());
+
+        // Upload vertex data. 1
+        glBindBuffer(GL_ARRAY_BUFFER, mVerticesVBO);
+        glBufferData(GL_ARRAY_BUFFER,  static_cast<GLsizeiptr>(vertexCount * sizeof(sf::Vertex)), vertexCount > 0 ? &mVertices[0] : nullptr, GL_DYNAMIC_DRAW);
+
+        // Position attribute.
+        glEnableVertexAttribArray(mPositionAttribLocation);
+
+        glVertexAttribPointer(mPositionAttribLocation, 2, GL_FLOAT, GL_FALSE, sizeof(sf::Vertex), reinterpret_cast<const void*>(offsetof(sf::Vertex, position)));
+
+        // Texture coordinate attribute.
+        glEnableVertexAttribArray(mTexCoordsAttribLocation);
+        glVertexAttribPointer(mTexCoordsAttribLocation, 2, GL_FLOAT, GL_FALSE, sizeof(sf::Vertex), reinterpret_cast<const void*>(offsetof(sf::Vertex, texCoords)));
+
+        // Upload sprite number data. 2
+        glBindBuffer(GL_ARRAY_BUFFER, mSpriteNumberVBO);
+
+        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(mSpriteNumbers.size() * sizeof(float)), mSpriteNumbers.empty() ? nullptr : mSpriteNumbers.data(), GL_DYNAMIC_DRAW);
+
+        glEnableVertexAttribArray(mSpriteNumberAttribLocation);
+        glVertexAttribPointer(mSpriteNumberAttribLocation, 1, GL_FLOAT, GL_FALSE, sizeof(float), nullptr);
+
+        // Upload transformation data as a 1D texture. 3
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_1D, mTransformsTexture);
+
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri( GL_TEXTURE_1D,GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_1D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F_ARB, static_cast<GLsizei>(mTransforms.size()), 0, GL_RGBA, GL_FLOAT, mTransforms.data());
+
+        // Bind the atlas texture. 4
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mAtlas.getTexture().getNativeHandle());
+
+        // Set shader uniforms. 5
+        glUniform1i(mTextureUniformLocation, 0);
+        glUniform1i(mTransformsUniformLocation, 1);
+        glUniform1i(mNumTransformsUniformLocation, static_cast<GLint>(mTransforms.size()));
+
+        // Draw everything in one draw call. 6
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+
+        // Clean up vertex attribute state.
+        glDisableVertexAttribArray(mPositionAttribLocation);
+        glDisableVertexAttribArray(mTexCoordsAttribLocation);
+        glDisableVertexAttribArray(mSpriteNumberAttribLocation);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 
     // TODO
     BasicTransform& getTransform(SpriteID id) {
