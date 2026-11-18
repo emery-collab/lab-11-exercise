@@ -1,2 +1,49 @@
 2a.
+Batching Solution:
+Average fps: 591.929
+Average fps: 452.16
+Average fps: 397.618
+Average fps: 367.293
+Average fps: 325.837
+Average fps: 309.117
+Average fps: 295.361
+Average fps: 287.953
+Average fps: 268.821
+Average fps: 239.009
+Average fps: 222.226
+Average fps: 210.177
+Average fps: 204.253
+Average fps: 196.927
+
+No Batch:
+Average fps: 555.877
+Average fps: 447.259
+Average fps: 404.785
+Average fps: 377.101
+Average fps: 369.739
+Average fps: 363.856
+Average fps: 361.826
+Average fps: 345.818
+Average fps: 288.36
+Average fps: 235.549
+Average fps: 215.021
+Average fps: 201.656
+Average fps: 191.276
+Average fps: 185.131
+Average fps: 180.622
+Average fps: 181.234
+Average fps: 185.196
+Average fps: 191.645
+
+The batched and non-batched implementations achieved relatively similar average FPS in my testing. 
+Although batching reduces the number of draw calls by combining sprites into a single rendering operation, 
+this did not produce a significant performance improvement in my test. This suggests that draw-call 
+overhead was not a major performance bottleneck for the workload being tested. Overall, I would have expected
+the implementation with batching to have superior fps, due to less draw calls being required, and the difference
+seen here is slight, and almost minimal.
+
 2b.
+One way to implement depth is to assign different Z coordinates to sprites in clip space and enable OpenGL's 
+depth testing using glEnable(GL_DEPTH_TEST). The rasterization pipeline can then use the depth buffer to 
+automatically determine which sprites should appear in front of others, eliminating the need to manually sort 
+sprites by depth on the CPU.
